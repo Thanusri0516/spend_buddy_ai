@@ -1,0 +1,60 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum PrimaryUseCase {
+  CODING
+  WRITING
+  RESEARCH
+  DATA_ANALYSIS
+  MIXED
+}
+
+model Audit {
+  id               String         @id @default(cuid())
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  totalSpend       Decimal        @db.Decimal(12, 2)
+  estimatedSavings Decimal        @default(0) @db.Decimal(12, 2)
+  teamSize         Int
+  primaryUseCase   PrimaryUseCase
+  shareSlug        String?        @unique
+  tools            AuditTool[]
+  lead             Lead?
+
+  @@index([createdAt])
+}
+
+model AuditTool {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  auditId      String
+  toolName     String
+  planName     String
+  monthlySpend Decimal  @db.Decimal(12, 2)
+  seats        Int
+  audit        Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@index([auditId])
+  @@index([toolName])
+}
+
+model Lead {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  auditId   String   @unique
+  email     String
+  company   String
+  role      String
+  audit     Audit    @relation(fields: [auditId], references: [id], onDelete: Cascade)
+
+  @@index([email])
+}
