@@ -38,7 +38,7 @@ export interface SavingsSummary {
   annualSavings: number;
 }
 
-export type RecommendationKind = "downgrade" | "alternative" | "usage" | "keep";
+export type RecommendationKind = "downgrade" | "upgrade" | "optimization" | "seat-optimization" | "consolidation" | "credits" | "alternative" | "usage" | "keep";
 
 export interface ToolRecommendation {
   id: string;

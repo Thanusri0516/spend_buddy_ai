@@ -1,40 +1,44 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
-
-import { auditCreateInputSchema } from "@/schemas/audit";
 import { createAudit } from "@/server/audit/repository";
-import type { CreateAuditResponse } from "@/types/api";
+import { auditInputSchema } from "@/features/audit/audit-schema";
 
 export async function POST(request: Request) {
   try {
-    const body: unknown = await request.json();
-    const input = auditCreateInputSchema.parse(body);
-    const audit = await createAudit(input);
+    const input = await request.json();
 
-    return NextResponse.json<CreateAuditResponse>({
-      ok: true,
-      auditId: audit.id,
-    });
-  } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json<CreateAuditResponse>(
+    // Validate the input
+    const parseResult = auditInputSchema.safeParse(input);
+    if (!parseResult.success) {
+      return NextResponse.json(
         {
           ok: false,
-          code: "VALIDATION_ERROR",
-          message: "Audit input is invalid.",
-          fieldErrors: error.flatten().fieldErrors,
+          code: "VALIDATION_ERROR" as const,
+          message: "Invalid audit input",
+          fieldErrors: parseResult.error.flatten().fieldErrors,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    return NextResponse.json<CreateAuditResponse>(
+    // Create the audit in the database
+    const audit = await createAudit(parseResult.data);
+
+    return NextResponse.json(
+      {
+        ok: true,
+        auditId: audit.id,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("Create audit error:", error);
+    return NextResponse.json(
       {
         ok: false,
-        code: "SERVER_ERROR",
-        message: "Unable to create audit.",
+        code: "SERVER_ERROR" as const,
+        message: "Failed to create audit",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

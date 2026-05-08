@@ -1,76 +1,109 @@
-import { getToolById } from "@/config/ai-tools";
 import type {
   AuditInput,
   AuditReport,
   RecommendationKind,
   ToolRecommendation,
 } from "@/types/audit";
+import { generateAuditSync } from "../audit-engine/audit-engine-core";
+import type { AuditInput as NewAuditInput, Recommendation } from "../audit-engine/types";
 
-const HIGH_PLAN_KEYWORDS = ["team", "business", "enterprise", "committed"];
+export async function buildAuditReport(input: AuditInput, id = "sample-audit"): Promise<AuditReport> {
+  const newInput: NewAuditInput = {
+    tools: input.tools.map((tool) => ({
+      toolId: tool.toolId,
+      plan: tool.plan,
+      monthlySpend: tool.monthlySpend,
+      seats: tool.seats,
+    })),
+    teamSize: input.teamSize,
+    useCase: input.primaryUseCase === "data-analysis" ? "data" : input.primaryUseCase,
+  };
 
-function getRecommendationKind(plan: string, monthlySpend: number): RecommendationKind {
-  const normalizedPlan = plan.toLowerCase();
+  const baseResult = generateAuditSync(newInput);
 
-  if (HIGH_PLAN_KEYWORDS.some((keyword) => normalizedPlan.includes(keyword))) {
-    return "downgrade";
+  // Call server-side route instead of Grok directly
+  let aiRecommendations: Recommendation[] = [];
+  try {
+    const baseUrl = typeof window !== "undefined" ? "" : process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const res = await fetch(`${baseUrl}/api/audit/ai-recommendations`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newInput),
+    });
+
+    // Use text() first to guard against empty body
+    const text = await res.text();
+    if (text && text.trim().length > 0) {
+      const data = JSON.parse(text);
+      aiRecommendations = data.recommendations ?? [];
+    } else {
+      console.warn("AI recommendations API returned empty body");
+    }
+  } catch (e) {
+    console.error("Failed to fetch AI recommendations:", e);
   }
 
-  if (monthlySpend >= 300) {
-    return "usage";
-  }
+  const allRecs = [...baseResult.recommendations, ...aiRecommendations];
+  const extraSavings = aiRecommendations.reduce((s, r) => s + (r.monthlySavings ?? 0), 0);
+  const totalMonthlySavings = baseResult.totalMonthlySavings + extraSavings;
 
-  return "keep";
+  return {
+    id,
+    input,
+    recommendations: allRecs.map((rec, i) => ({
+      id: `rec-${i}`,
+      toolName: rec.tool,
+      currentPlan: rec.currentPlan,
+      kind: rec.type as RecommendationKind,
+      action: rec.recommendedPlan,
+      estimatedMonthlySavings: rec.monthlySavings,
+      reasoning: rec.reason,
+    })),
+    summary: {
+      currentMonthlySpend: baseResult.totalCurrentSpend,
+      optimizedMonthlySpend: baseResult.totalCurrentSpend - totalMonthlySavings,
+      monthlySavings: totalMonthlySavings,
+      annualSavings: totalMonthlySavings * 12,
+    },
+    generatedSummary: baseResult.summary,
+  };
 }
 
-export function buildAuditReport(input: AuditInput, id = "sample-audit"): AuditReport {
-  const recommendations: ToolRecommendation[] = input.tools.map((tool) => {
-    const toolConfig = getToolById(tool.toolId);
-    const kind = getRecommendationKind(tool.plan, tool.monthlySpend);
-    const savingsRate = kind === "downgrade" ? 0.35 : kind === "usage" ? 0.2 : 0.05;
-    const estimatedMonthlySavings = Math.round(tool.monthlySpend * savingsRate);
+export function buildAuditReportSync(input: AuditInput, id = "sample-audit"): AuditReport {
+  const newInput: NewAuditInput = {
+    tools: input.tools.map((tool) => ({
+      toolId: tool.toolId,
+      plan: tool.plan,
+      monthlySpend: tool.monthlySpend,
+      seats: tool.seats,
+    })),
+    teamSize: input.teamSize,
+    useCase: input.primaryUseCase === "data-analysis" ? "data" : input.primaryUseCase,
+  };
 
-    return {
-      id: tool.id,
-      toolName: toolConfig.name,
-      currentPlan: tool.plan,
-      kind,
-      action:
-        kind === "downgrade"
-          ? "Review plan tier and seat allocation"
-          : kind === "usage"
-            ? "Add usage alerts and monthly owner review"
-            : "Keep current setup",
-      estimatedMonthlySavings,
-      reasoning:
-        kind === "downgrade"
-          ? `${toolConfig.name} ${tool.plan} may be more capacity than this team currently needs.`
-          : kind === "usage"
-            ? `${toolConfig.name} spend is high enough to benefit from alerts, limits, and owner checks.`
-            : `${toolConfig.name} looks reasonable based on the current inputs.`,
-    };
-  });
+  const auditResult = generateAuditSync(newInput);
 
-  const currentMonthlySpend = input.tools.reduce((total, tool) => total + tool.monthlySpend, 0);
-  const monthlySavings = recommendations.reduce(
-    (total, item) => total + item.estimatedMonthlySavings,
-    0,
-  );
-  const optimizedMonthlySpend = Math.max(0, currentMonthlySpend - monthlySavings);
+  const recommendations: ToolRecommendation[] = auditResult.recommendations.map((rec, index) => ({
+    id: `rec-${index}`,
+    toolName: rec.tool,
+    currentPlan: rec.currentPlan,
+    kind: rec.type as RecommendationKind,
+    action: rec.recommendedPlan,
+    estimatedMonthlySavings: rec.monthlySavings,
+    reasoning: rec.reason,
+  }));
 
   return {
     id,
     input,
     recommendations,
     summary: {
-      currentMonthlySpend,
-      optimizedMonthlySpend,
-      monthlySavings,
-      annualSavings: monthlySavings * 12,
+      currentMonthlySpend: auditResult.totalCurrentSpend,
+      optimizedMonthlySpend: auditResult.totalOptimizedSpend,
+      monthlySavings: auditResult.totalMonthlySavings,
+      annualSavings: auditResult.totalAnnualSavings,
     },
-    generatedSummary:
-      monthlySavings >= 500
-        ? "Your AI stack shows meaningful optimization potential across plan tiers, seat ownership, and usage controls. A focused review could reduce recurring spend without slowing down the teams already getting value from these tools."
-        : "Your AI stack appears relatively efficient from the current inputs. The best next step is to keep owner visibility high and revisit plan fit as team usage changes.",
+    generatedSummary: auditResult.summary,
   };
 }
 

@@ -21,3 +21,24 @@
 - Build the recommendation engine.
 - Connect the results page to saved audit data.
 - Add persistence for leads and share flows.
+
+## Day 2 — 2026-05-08
+**Hours worked:** 4
+
+### What I did
+- Added audit persistence and database-driven results flow.
+- Integrated Groq AI recommendations endpoint.
+- Fixed Next.js 15 async params handling.
+- Refactored dashboard data fetching and helper utilities.
+
+### What I learned
+- Groq models change frequently.
+- Next.js 15 requires async route params.
+- Server fetches need absolute URLs.
+
+### Blockers
+- None.
+
+### Plan
+- Build AI summaries and pricing calculations.
+- Improve recommendation logic and error handling.

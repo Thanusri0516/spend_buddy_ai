@@ -1,53 +1,53 @@
 import { NextResponse } from "next/server";
-import { ZodError } from "zod";
-
-import { auditRouteParamsSchema } from "@/schemas/audit";
 import { getAuditById } from "@/server/audit/repository";
-import type { GetAuditResponse } from "@/types/api";
 
 export async function GET(
   _request: Request,
-  { params }: { params: Promise<{ id: string }> },
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const parsedParams = auditRouteParamsSchema.parse(await params);
-    const audit = await getAuditById(parsedParams.id);
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        {
+          ok: false,
+          code: "VALIDATION_ERROR" as const,
+          message: "Audit ID is required",
+        },
+        { status: 400 }
+      );
+    }
+
+    const audit = await getAuditById(id);
 
     if (!audit) {
-      return NextResponse.json<GetAuditResponse>(
+      return NextResponse.json(
         {
           ok: false,
-          code: "NOT_FOUND",
-          message: "Audit not found.",
+          code: "NOT_FOUND" as const,
+          message: "Audit not found",
         },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json<GetAuditResponse>({
-      ok: true,
-      audit,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        audit,
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    if (error instanceof ZodError) {
-      return NextResponse.json<GetAuditResponse>(
-        {
-          ok: false,
-          code: "VALIDATION_ERROR",
-          message: "Audit id is invalid.",
-          fieldErrors: error.flatten().fieldErrors,
-        },
-        { status: 400 },
-      );
-    }
-
-    return NextResponse.json<GetAuditResponse>(
+    console.error("Get audit error:", error);
+    return NextResponse.json(
       {
         ok: false,
-        code: "SERVER_ERROR",
-        message: "Unable to fetch audit.",
+        code: "SERVER_ERROR" as const,
+        message: "Failed to retrieve audit",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

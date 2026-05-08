@@ -33,8 +33,8 @@ export async function generateMetadata({
   };
 }
 
-export default function PublicAuditPage() {
-  const report = sampleAuditReport;
+export default async function PublicAuditPage() {
+  const report = await sampleAuditReport;
 
   return (
     <section className="bg-muted/35 py-10 sm:py-14">

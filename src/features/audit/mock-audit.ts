@@ -29,4 +29,4 @@ export const sampleAuditInput: AuditInput = {
   ],
 };
 
-export const sampleAuditReport: AuditReport = buildAuditReport(sampleAuditInput, "public-sample");
+export const sampleAuditReport: Promise<AuditReport> = buildAuditReport(sampleAuditInput, "public-sample");

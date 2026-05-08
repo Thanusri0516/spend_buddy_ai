@@ -37,7 +37,9 @@ const steps = [
   },
 ];
 
-export function LandingPage() {
+export async function LandingPage() {
+  const report = await sampleAuditReport;
+
   return (
     <>
       <section className="relative overflow-hidden border-b bg-[linear-gradient(180deg,hsl(var(--muted))_0%,hsl(var(--background))_78%)]">
@@ -99,11 +101,11 @@ export function LandingPage() {
                     </Badge>
                   </div>
                   <p className="mt-4 text-4xl font-semibold">
-                    {formatCurrency(sampleAuditReport.summary.annualSavings)}/year saved
+                    {formatCurrency(report.summary.annualSavings)}/year saved
                   </p>
                 </div>
                 <div className="grid gap-3 p-5">
-                  {sampleAuditReport.recommendations.slice(0, 3).map((item) => (
+                  {report.recommendations.slice(0, 3).map((item) => (
                     <div
                       key={item.id}
                       className="flex items-center justify-between gap-4 rounded-md bg-muted p-4"
@@ -181,7 +183,7 @@ export function LandingPage() {
                 <div>
                   <p className="text-sm text-background/70">Example savings preview</p>
                   <h2 className="mt-2 text-3xl font-semibold tracking-normal">
-                    {formatCurrency(sampleAuditReport.summary.annualSavings)}/year saved
+                    {formatCurrency(report.summary.annualSavings)}/year saved
                   </h2>
                   <p className="mt-3 max-w-2xl text-background/70">
                     A realistic preview of how the audit turns current spend into a focused

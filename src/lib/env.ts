@@ -7,6 +7,7 @@ const envSchema = z.object({
   SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   RESEND_FROM_EMAIL: z.string().email().optional(),
+  GROQ_API_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

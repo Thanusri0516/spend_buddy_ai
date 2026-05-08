@@ -82,6 +82,10 @@ export function getToolById(id: string) {
   return AI_TOOLS.find((tool) => tool.id === id) ?? AI_TOOLS[0];
 }
 
+export function getToolByName(name: string) {
+  return AI_TOOLS.find((tool) => tool.name === name) ?? AI_TOOLS[0];
+}
+
 export function getToolInitials(id: string) {
   const initials: Record<string, string> = {
     chatgpt: "CG",

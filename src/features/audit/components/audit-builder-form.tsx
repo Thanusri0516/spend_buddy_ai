@@ -229,7 +229,12 @@ export function AuditBuilderForm() {
                       <Label className="xl:hidden" htmlFor={`${fieldPrefix}-plan`}>
                         Plan
                       </Label>
-                      <Select id={`${fieldPrefix}-plan`} {...register(`tools.${index}.plan`)}>
+                      <Select
+                        id={`${fieldPrefix}-plan`}
+                        key={`${watch(`tools.${index}.toolId`)}-plan`}
+                        defaultValue={selectedTool.plans[0]}
+                        {...register(`tools.${index}.plan`)}
+                      >
                         {selectedTool.plans.map((plan) => (
                           <option key={plan} value={plan}>
                             {plan}

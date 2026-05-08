@@ -2,7 +2,11 @@
 
 import Link from "next/link";
 import { CalendarClock, DollarSign, TrendingDown, WalletCards } from "lucide-react";
-
+import { useEffect, useState } from "react";
+import { buildAuditReport, formatCurrency } from "@/features/audit/audit-calculations";
+import { getToolByName } from "@/config/ai-tools";
+import type { AuditReport } from "@/types/audit";
+import type { AuditDto } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,12 +14,36 @@ import { AiSummaryCard } from "@/features/audit/components/ai-summary-card";
 import { LeadCaptureCard } from "@/features/audit/components/lead-capture-card";
 import { MetricCard } from "@/features/audit/components/metric-card";
 import { RecommendationCard } from "@/features/audit/components/recommendation-card";
-import { buildAuditReport, formatCurrency } from "@/features/audit/audit-calculations";
-import { useAuditStore } from "@/store/audit-store";
 
-export function AuditResultsDashboard() {
-  const auditInput = useAuditStore((state) => state.auditInput);
-  const report = buildAuditReport(auditInput, "local-preview");
+interface AuditResultsDashboardProps {
+  audit: AuditDto;
+}
+
+export function AuditResultsDashboard({ audit }: AuditResultsDashboardProps) {
+  const [report, setReport] = useState<AuditReport | null>(null);
+
+  useEffect(() => {
+    // Convert AuditDto to AuditInput format
+    const auditInput = {
+      teamSize: audit.teamSize,
+      primaryUseCase: audit.primaryUseCase,
+      tools: audit.tools.map((tool) => {
+        const toolConfig = getToolByName(tool.toolName);
+        return {
+          id: tool.id,
+          toolId: toolConfig.id,
+          plan: tool.planName,
+          monthlySpend: tool.monthlySpend,
+          seats: tool.seats,
+        };
+      }),
+    };
+
+    buildAuditReport(auditInput, audit.id).then(setReport);
+  }, [audit]);
+
+  if (!report) return <div className="flex items-center justify-center min-h-screen">Loading report...</div>;
+
   const savingsAreHigh = report.summary.monthlySavings > 500;
   const savingsAreLow = report.summary.monthlySavings < 75;
 
@@ -26,7 +54,7 @@ export function AuditResultsDashboard() {
           <div>
             <Badge>Audit results</Badge>
             <h1 className="mt-4 text-3xl font-semibold tracking-normal sm:text-5xl">
-              Your SpendBuddy AI is ready.
+              Your SpendBuddy report is ready.
             </h1>
             <p className="mt-4 max-w-2xl leading-7 text-muted-foreground">
               Review savings, plan-fit recommendations, and a shareable report preview.
@@ -78,7 +106,7 @@ export function AuditResultsDashboard() {
               <div className="mb-4">
                 <h2 className="text-2xl font-semibold tracking-normal">Recommendations</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Frontend-only recommendation UI for the current product prototype.
+                  These recommendations are generated from local prototype rules, not live AI suggestions.
                 </p>
               </div>
               <div className="grid gap-4">
