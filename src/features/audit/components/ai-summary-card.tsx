@@ -1,46 +1,38 @@
 "use client";
 
-import { AlertCircle } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Sparkles } from "lucide-react";
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
 
-interface AiSummaryCardProps {
+export function AiSummaryCard({
+  summary,
+  highlights,
+}: {
   summary: string;
-}
-
-export function AiSummaryCard({ summary }: AiSummaryCardProps) {
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => setState("ready"), 700);
-    return () => window.clearTimeout(timer);
-  }, []);
-
+  highlights?: string[];
+}) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>AI personalized summary</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {state === "loading" ? (
-          <div className="grid gap-3" aria-label="Loading personalized summary">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-11/12" />
-            <Skeleton className="h-4 w-3/4" />
-          </div>
+    <Card className="border-indigo-200/60 bg-indigo-50/40">
+      <CardContent className="grid gap-4 p-6">
+        <div className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
+          <Sparkles className="size-4" aria-hidden="true" />
+          AI summary
+        </div>
+
+        <p className="text-sm leading-6 text-slate-700">{summary}</p>
+
+        {highlights && highlights.length > 0 ? (
+          <ul className="grid gap-2 text-sm text-slate-700">
+            {highlights.map((item) => (
+              <li key={item} className="flex gap-2">
+                <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-indigo-500" aria-hidden="true" />
+                <span className="leading-6">{item}</span>
+              </li>
+            ))}
+          </ul>
         ) : null}
-        {state === "error" ? (
-          <div className="flex gap-3 rounded-md border bg-muted p-4">
-            <AlertCircle className="size-5 text-muted-foreground" aria-hidden="true" />
-            <p className="text-sm text-muted-foreground">
-              Summary is unavailable right now. Your recommendations are still shown below.
-            </p>
-          </div>
-        ) : null}
-        {state === "ready" ? <p className="leading-7 text-muted-foreground">{summary}</p> : null}
       </CardContent>
     </Card>
   );
 }
+

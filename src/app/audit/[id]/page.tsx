@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { BadgeDollarSign, EyeOff } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -6,9 +7,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { MetricCard } from "@/features/audit/components/metric-card";
 import { RecommendationCard } from "@/features/audit/components/recommendation-card";
 import { ShareActions } from "@/features/audit/components/share-actions";
-import { formatCurrency } from "@/features/audit/audit-calculations";
-import { sampleAuditReport } from "@/features/audit/mock-audit";
-import { getToolById } from "@/config/ai-tools";
+import { buildAuditReportSync, formatCurrency } from "@/features/audit/audit-calculations";
+import { getToolByName, getToolById } from "@/config/ai-tools";
+import { getAuditById } from "@/server/audit/repository";
 
 export async function generateMetadata({
   params,
@@ -33,8 +34,35 @@ export async function generateMetadata({
   };
 }
 
-export default async function PublicAuditPage() {
-  const report = await sampleAuditReport;
+export default async function PublicAuditPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+
+  const audit = await getAuditById(id);
+  if (!audit) {
+    notFound();
+  }
+
+  const auditInput = {
+    teamSize: audit.teamSize,
+    primaryUseCase: audit.primaryUseCase,
+    tools: audit.tools.map((tool) => {
+      const toolConfig = getToolByName(tool.toolName);
+      return {
+        id: tool.id,
+        toolId: toolConfig.id,
+        plan: tool.planName,
+        monthlySpend: tool.monthlySpend,
+        seats: tool.seats,
+      };
+    }),
+  };
+
+  // Public reports are deterministic + redacted; we avoid calling AI endpoints here.
+  const report = buildAuditReportSync(auditInput, audit.id);
 
   return (
     <section className="bg-muted/35 py-10 sm:py-14">

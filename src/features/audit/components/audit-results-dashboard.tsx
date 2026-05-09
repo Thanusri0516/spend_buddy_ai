@@ -14,6 +14,7 @@ import { AiSummaryCard } from "@/features/audit/components/ai-summary-card";
 import { LeadCaptureCard } from "@/features/audit/components/lead-capture-card";
 import { MetricCard } from "@/features/audit/components/metric-card";
 import { RecommendationCard } from "@/features/audit/components/recommendation-card";
+import type { RecommendationKind, ToolRecommendation } from "@/types/audit";
 
 interface AuditResultsDashboardProps {
   audit: AuditDto;
@@ -46,6 +47,50 @@ export function AuditResultsDashboard({ audit }: AuditResultsDashboardProps) {
 
   const savingsAreHigh = report.summary.monthlySavings > 500;
   const savingsAreLow = report.summary.monthlySavings < 75;
+  const recommendations = report.recommendations;
+
+  const summaryHighlights = [...recommendations]
+    .filter((rec) => (rec.estimatedMonthlySavings ?? 0) > 0)
+    .sort((a, b) => (b.estimatedMonthlySavings ?? 0) - (a.estimatedMonthlySavings ?? 0))
+    .slice(0, 3)
+    .map((rec) => `${rec.toolName}: ${rec.action} (${formatCurrency(rec.estimatedMonthlySavings)}/mo)`);
+
+  function sumSavings(recs: ToolRecommendation[]) {
+    return recs.reduce((sum, rec) => sum + rec.estimatedMonthlySavings, 0);
+  }
+
+  function buildOpportunity(label: string, kinds: RecommendationKind[], fallback: string) {
+    const matched = recommendations.filter((rec) => kinds.includes(rec.kind));
+    const total = sumSavings(matched);
+
+    return {
+      label,
+      count: matched.length,
+      total,
+      description:
+        matched.length > 0
+          ? `${matched.length} ${matched.length === 1 ? "opportunity" : "opportunities"} identified`
+          : fallback,
+    };
+  }
+
+  const opportunities = [
+    buildOpportunity(
+      "Plan downgrades",
+      ["downgrade"],
+      "No downgrade opportunities based on current inputs."
+    ),
+    buildOpportunity(
+      "Unused seats",
+      ["seat-optimization"],
+      "No seat reduction opportunities based on current inputs."
+    ),
+    buildOpportunity(
+      "Stack optimization",
+      ["consolidation", "credits", "optimization", "usage", "alternative", "keep", "upgrade"],
+      "No additional optimization opportunities based on current inputs."
+    ),
+  ];
 
   return (
     <section className="bg-muted/35 py-10 sm:py-14">
@@ -121,24 +166,24 @@ export function AuditResultsDashboard({ audit }: AuditResultsDashboardProps) {
                 Optimization opportunities
               </h2>
               <div className="grid gap-4 md:grid-cols-3">
-                {[
-                  "Downgrade recommendation",
-                  "Alternative tool recommendation",
-                  "API credit optimization",
-                ].map((label) => (
-                  <Card key={label}>
+                {opportunities.map((opportunity) => (
+                  <Card key={opportunity.label}>
                     <CardContent className="p-5">
-                      <h3 className="font-semibold">{label}</h3>
+                      <h3 className="font-semibold">{opportunity.label}</h3>
                       <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                        Reserved for the Day 2 intelligence layer and real audit rules.
+                        {opportunity.description}
                       </p>
+                      <p className="mt-4 text-2xl font-semibold">
+                        {formatCurrency(opportunity.total)}
+                      </p>
+                      <p className="mt-1 text-sm text-muted-foreground">Estimated monthly savings</p>
                     </CardContent>
                   </Card>
                 ))}
               </div>
             </section>
 
-            <AiSummaryCard summary={report.generatedSummary} />
+            <AiSummaryCard summary={report.generatedSummary} highlights={summaryHighlights} />
 
             {savingsAreHigh ? (
               <Card className="border-primary/25 bg-primary/5">
@@ -165,7 +210,7 @@ export function AuditResultsDashboard({ audit }: AuditResultsDashboardProps) {
                   Public reports hide email, company name, and personal info.
                 </p>
                 <Button asChild className="mt-4 w-full" variant="outline">
-                  <Link href="/audit/demo">Open public preview</Link>
+                  <Link href={`/audit/${audit.id}`}>Open public preview</Link>
                 </Button>
               </CardContent>
             </Card>

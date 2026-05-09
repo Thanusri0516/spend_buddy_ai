@@ -42,3 +42,25 @@
 ### Plan
 - Build AI summaries and pricing calculations.
 - Improve recommendation logic and error handling.
+
+## Day 3 — 2026-05-09
+**Hours worked:** 2
+
+### What I did
+- Built AI-generated audit summary flow.
+- Implemented pricing calculations and savings engine.
+- Added recommendation logic based on plans, team size, and use cases.
+- Improved recommendation quality and error handling.
+
+### What I learned
+- Rule-based calculations are more reliable for financial recommendations.
+- AI works best for summaries and explanation layers.
+- Use-case-aware recommendations improve audit accuracy.
+
+### Blockers
+- None.
+
+### Plan
+- Build shareable audit pages.
+- Add lead capture persistence.
+- Improve dashboard UI and recommendation cards.
